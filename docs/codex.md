@@ -64,7 +64,7 @@ Développer un **système de recommandation musicale** capable de proposer des *
 - - `user_name` (auteur de la critique)
 - - `user_rating` (note)
     - Format de sortie : `data/processed/albums.csv`.
-    - **Une ligne = un album unique.**
+    - **Une ligne = un album unique**
 
 ### 2. Script de scraping
 
