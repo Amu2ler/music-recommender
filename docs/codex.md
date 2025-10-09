@@ -128,13 +128,13 @@ Chaque album devient une entrée unique enrichie d’un vecteur d’embedding :
 
 ## 🧱 Prochaines étapes (Sprint 1)
 
-| Étape | Description                                                     | Responsable |
-| ----- | --------------------------------------------------------------- | ----------- |
-| 1️⃣    | Implémenter le scraper `guts_scraper.py` (HTML → CSV)           | Semih       |
-| 2️⃣    | Nettoyer et structurer les données (`data_cleaner.py`)          | Semih       |
-| 3️⃣    | Générer les embeddings texte (`vectorization/text_embedder.py`) | Arthur      |
-| 4️⃣    | Créer la collection Milvus insertion des vecteurs               | Arthur      |
-| 5️⃣    | Tester la première requête de similarité                        | Abdoulaye   |
+| Étape | Description                                                     |
+| ----- | --------------------------------------------------------------- |
+| 1️⃣    | Implémenter le scraper `guts_scraper.py` (HTML → CSV)           |
+| 2️⃣    | Nettoyer et structurer les données (`data_cleaner.py`)          |
+| 3️⃣    | Générer les embeddings texte (`vectorization/text_embedder.py`) |
+| 4️⃣    | Créer la collection Milvus insertion des vecteurs               |
+| 5️⃣    | Tester la première requête de similarité                        |
 
 ## 📘 Agents
 
