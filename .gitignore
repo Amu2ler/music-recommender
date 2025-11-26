@@ -21,9 +21,11 @@ venv/
 .idea/
 
 # Fichiers Docker & données
-volumes/
+volumes/*
 *.db
 *.log
 *.pid
 *.minio
 *.milvus
+
+volumes/
