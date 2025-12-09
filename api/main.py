@@ -24,6 +24,7 @@ app = FastAPI(
 collection = None
 model = None
 metadata_df = None
+viz_df = None  # For 2D visualization
 
 class AlbumResult(BaseModel):
     id: int
@@ -39,9 +40,18 @@ class SearchResponse(BaseModel):
     total_found: int
     filters_applied: Dict[str, Any]
 
+class ExploreAlbum(BaseModel):
+    title: str
+    artist: str
+    x: float
+    y: float
+    styles: str
+    note: Optional[float] = None
+    style_category: str
+
 @app.on_event("startup")
 async def startup_event():
-    global collection, model, metadata_df
+    global collection, model, metadata_df, viz_df
     
     print(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
     try:
@@ -68,6 +78,14 @@ async def startup_event():
         print(f"✅ Metadata loaded ({len(metadata_df)} albums).")
     except Exception as e:
         print(f"⚠️ Failed to load metadata: {e}")
+    
+    # Load 2D visualization data
+    viz_path = "data/processed/albums_2d.parquet"
+    try:
+        viz_df = pd.read_parquet(viz_path)
+        print(f"✅ Visualization data loaded ({len(viz_df)} albums).")
+    except Exception as e:
+        print(f"⚠️ Failed to load visualization data: {e}")
 
 @app.get("/health")
 def health():
@@ -180,6 +198,50 @@ def search(
 
     except Exception as e:
         print(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/explore")
+def explore(
+    style_filter: Optional[str] = Query(None, description="Filter by style category"),
+    min_note: Optional[float] = Query(None, ge=0, le=6, description="Minimum note")
+):
+    if viz_df is None:
+        raise HTTPException(status_code=503, detail="Visualization data not available")
+    
+    try:
+        # Apply filters
+        filtered_df = viz_df.copy()
+        
+        if style_filter and style_filter != "all":
+            filtered_df = filtered_df[filtered_df["style_category"] == style_filter]
+        
+        if min_note:
+            filtered_df = filtered_df[
+                (filtered_df["note_moyenne"].notna()) & 
+                (filtered_df["note_moyenne"] >= min_note)
+            ]
+        
+        # Convert to list of dicts
+        albums = []
+        for _, row in filtered_df.iterrows():
+            albums.append(ExploreAlbum(
+                title=row["album_name"],
+                artist=row["artist_name"],
+                x=float(row["x"]),
+                y=float(row["y"]),
+                styles=row["styles"] if pd.notna(row["styles"]) else "",
+                note=float(row["note_moyenne"]) if pd.notna(row["note_moyenne"]) else None,
+                style_category=row["style_category"]
+            ))
+        
+        return {
+            "albums": albums,
+            "total": len(albums),
+            "style_categories": sorted(viz_df["style_category"].unique().tolist())
+        }
+    
+    except Exception as e:
+        print(f"Explore error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
