@@ -12,3 +12,5 @@ scikit-learn
 matplotlib
 seaborn
 tqdm
+umap-learn
+plotly
