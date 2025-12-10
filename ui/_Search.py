@@ -41,15 +41,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎵 Guts of Darkness Recommender")
+st.title(" Guts of Darkness Recommender")
 st.markdown("*Découvrez des albums grâce à la recherche sémantique*")
 
 # Sidebar
 with st.sidebar:
-    st.header("⚙️ Filtres")
+    st.header(" Filtres")
     
     # Health check
-    if st.button("🔍 Check API Health"):
+    if st.button(" Check API Health"):
         try:
             response = requests.get(f"{API_URL}/health")
             if response.status_code == 200:
@@ -66,7 +66,7 @@ with st.sidebar:
     st.divider()
     
     # Note filter
-    st.subheader("📊 Note minimale")
+    st.subheader(" Note minimale")
     min_note = st.slider(
         "Filtrer par note",
         min_value=0.0,
@@ -80,7 +80,7 @@ with st.sidebar:
     st.divider()
     
     # Styles filter
-    st.subheader("🎸 Styles musicaux")
+    st.subheader(" Styles musicaux")
     if available_styles:
         selected_styles = st.multiselect(
             "Sélectionner des styles",
@@ -94,7 +94,7 @@ with st.sidebar:
     st.divider()
     
     # Sort options
-    st.subheader("🔀 Tri des résultats")
+    st.subheader(" Tri des résultats")
     sort_by = st.selectbox(
         "Trier par",
         options=["score", "note", "alphabetical"],
@@ -106,7 +106,7 @@ with st.sidebar:
     )
 
 # Main search
-st.header("🔎 Recherche")
+st.header(" Recherche")
 col1, col2 = st.columns([3, 1])
 with col1:
     query = st.text_input(
@@ -117,7 +117,7 @@ with col1:
 with col2:
     top_k = st.number_input("Résultats", min_value=1, max_value=50, value=10)
 
-if st.button("🎵 Rechercher", type="primary", use_container_width=True):
+if st.button(" Rechercher", type="primary", use_container_width=True):
     if query:
         with st.spinner("Recherche en cours..."):
             try:
@@ -145,7 +145,7 @@ if st.button("🎵 Rechercher", type="primary", use_container_width=True):
                     
                     # Display filters applied
                     if filters.get("min_note") or filters.get("styles"):
-                        st.info(f"🔍 Filtres appliqués: " + 
+                        st.info(f" Filtres appliqués: " + 
                                (f"Note ≥ {filters.get('min_note')}" if filters.get("min_note") else "") +
                                (f" | Styles: {filters.get('styles')}" if filters.get("styles") else ""))
                     
@@ -176,14 +176,14 @@ if st.button("🎵 Rechercher", type="primary", use_container_width=True):
                                 st.markdown(f"""
                                 <div class="album-card">
                                     <h3 style="color: #1f1f1f; margin-bottom: 0.5rem;">{i}. {album['title']}</h3>
-                                    <p style="color: #4a4a4a; font-size: 1.1rem; margin-bottom: 0.5rem;"><strong>🎤 Artiste:</strong> {album['artist']}</p>
-                                    <p style="margin-bottom: 0.5rem;"><span class="{score_class}">🎯 Score de similarité: {score_6:.1f}/6 {score_label}</span></p>
+                                    <p style="color: #4a4a4a; font-size: 1.1rem; margin-bottom: 0.5rem;"><strong> Artiste:</strong> {album['artist']}</p>
+                                    <p style="margin-bottom: 0.5rem;"><span class="{score_class}"> Score de similarité: {score_6:.1f}/6 {score_label}</span></p>
                                 """, unsafe_allow_html=True)
                                 
                                 # Note
                                 if album.get('note'):
                                     note_stars = "⭐" * int(album['note'])
-                                    st.markdown(f"<p style='color: #2c3e50;'><strong>📊 Note moyenne:</strong> {album['note']:.1f}/6 {note_stars}</p>", unsafe_allow_html=True)
+                                    st.markdown(f"<p style='color: #2c3e50;'><strong> Note moyenne:</strong> {album['note']:.1f}/6 {note_stars}</p>", unsafe_allow_html=True)
                                 
                                 # Styles
                                 if album.get('styles'):
@@ -194,7 +194,7 @@ if st.button("🎵 Rechercher", type="primary", use_container_width=True):
                                 
                                 # Chronique excerpt
                                 if album.get('chronique_excerpt'):
-                                    with st.expander("📖 Extrait de la chronique"):
+                                    with st.expander(" Extrait de la chronique"):
                                         st.write(album['chronique_excerpt'])
                                 
                                 st.markdown("</div>", unsafe_allow_html=True)
