@@ -19,3 +19,11 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# Fichiers Docker & données
+volumes/
+*.db
+*.log
+*.pid
+*.minio
+*.milvus

@@ -1,0 +1,16 @@
+pandas
+numpy
+sentence-transformers
+pymilvus
+requests
+beautifulsoup4
+fastapi
+uvicorn
+pydantic
+streamlit
+scikit-learn
+matplotlib
+seaborn
+tqdm
+umap-learn
+plotly
