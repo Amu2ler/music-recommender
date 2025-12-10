@@ -49,43 +49,50 @@ class ExploreAlbum(BaseModel):
     note: Optional[float] = None
     style_category: str
 
-@app.on_event("startup")
-async def startup_event():
+# Helper function for initialization
+async def initialize_service():
     global collection, model, metadata_df, viz_df
     
-    print(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
-    try:
-        connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
-        if utility.has_collection(COLLECTION_NAME):
-            collection = Collection(COLLECTION_NAME)
-            collection.load()
-            print(f"✅ Connected to Milvus collection '{COLLECTION_NAME}'.")
-        else:
-            print(f"⚠️ Collection '{COLLECTION_NAME}' not found. Please run the load script.")
-    except Exception as e:
-        print(f"❌ Failed to connect to Milvus: {e}")
+    if collection is None:
+        print(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
+        try:
+            connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
+            if utility.has_collection(COLLECTION_NAME):
+                collection = Collection(COLLECTION_NAME)
+                collection.load()
+                print(f"✅ Connected to Milvus collection '{COLLECTION_NAME}'.")
+            else:
+                print(f"⚠️ Collection '{COLLECTION_NAME}' not found.")
+        except Exception as e:
+            print(f"❌ Failed to connect to Milvus: {e}")
 
-    print(f"Loading model '{MODEL_NAME}'...")
-    try:
-        model = SentenceTransformer(MODEL_NAME)
-        print("✅ Model loaded.")
-    except Exception as e:
-        print(f"❌ Failed to load model: {e}")
+    if model is None:
+        print(f"Loading model '{MODEL_NAME}'...")
+        try:
+            model = SentenceTransformer(MODEL_NAME)
+            print("✅ Model loaded.")
+        except Exception as e:
+            print(f"❌ Failed to load model: {e}")
     
-    print(f"Loading metadata from {DATA_PATH}...")
-    try:
-        metadata_df = pd.read_parquet(DATA_PATH)
-        print(f"✅ Metadata loaded ({len(metadata_df)} albums).")
-    except Exception as e:
-        print(f"⚠️ Failed to load metadata: {e}")
-    
-    # Load 2D visualization data
-    viz_path = "data/processed/albums_2d.parquet"
-    try:
-        viz_df = pd.read_parquet(viz_path)
-        print(f"✅ Visualization data loaded ({len(viz_df)} albums).")
-    except Exception as e:
-        print(f"⚠️ Failed to load visualization data: {e}")
+    if metadata_df is None:
+        print(f"Loading metadata from {DATA_PATH}...")
+        try:
+            metadata_df = pd.read_parquet(DATA_PATH)
+            print(f"✅ Metadata loaded ({len(metadata_df)} albums).")
+        except Exception as e:
+            print(f"⚠️ Failed to load metadata: {e}")
+            
+    if viz_df is None:
+        viz_path = "data/processed/albums_2d.parquet"
+        try:
+            viz_df = pd.read_parquet(viz_path)
+            print(f"✅ Visualization data loaded ({len(viz_df)} albums).")
+        except Exception as e:
+            print(f"⚠️ Failed to load visualization data: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    await initialize_service()
 
 @app.get("/health")
 def health():
@@ -104,13 +111,17 @@ def health():
     }
 
 @app.post("/search", response_model=SearchResponse)
-def search(
+async def search(
     query: str = Query(..., description="Text query"),
     top_k: int = Query(10, ge=1, le=100, description="Number of results"),
     min_note: Optional[float] = Query(None, ge=0, le=6, description="Minimum average note"),
     styles: Optional[str] = Query(None, description="Comma-separated styles to filter"),
     sort_by: str = Query("score", regex="^(score|note|alphabetical)$", description="Sort results by")
 ):
+    # Lazy initialization attempt
+    if not collection or not model:
+        await initialize_service()
+        
     if not collection or not model:
         raise HTTPException(status_code=503, detail="Service not initialized (Milvus or Model missing)")
 
@@ -201,10 +212,14 @@ def search(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/explore")
-def explore(
+async def explore(
     style_filter: Optional[str] = Query(None, description="Filter by style category"),
     min_note: Optional[float] = Query(None, ge=0, le=6, description="Minimum note")
 ):
+    # Lazy initialization attempt
+    if viz_df is None:
+        await initialize_service()
+
     if viz_df is None:
         raise HTTPException(status_code=503, detail="Visualization data not available")
     

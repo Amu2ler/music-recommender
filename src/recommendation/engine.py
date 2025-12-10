@@ -4,7 +4,7 @@ from pymilvus import connections, Collection
 from sentence_transformers import SentenceTransformer
 
 class Recommender:
-    def __init__(self, milvus_host="127.0.0.1", milvus_port="19530", data_path="../data/processed/sample_albums_embedded.parquet"):
+    def __init__(self, milvus_host="127.0.0.1", milvus_port="19530", data_path="data/processed/sample_albums_embedded.parquet"):
         self.milvus_host = milvus_host
         self.milvus_port = milvus_port
         self.data_path = data_path
@@ -45,24 +45,24 @@ class Recommender:
             
         query_embedding = self.model.encode([query])
         
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        search_params = {"metric_type": "IP", "params": {"nprobe": 10}}
         results = self.collection.search(
             data=query_embedding,
             anns_field="embedding",
             param=search_params,
             limit=top_k,
-            output_fields=["title", "artist"]
+            output_fields=["album_name", "artist_name"]
         )
         
         output = []
         for hits in results:
             for hit in hits:
                 # Enrich with metadata from DataFrame
-                meta = self._get_metadata(hit.entity.get("title"), hit.entity.get("artist"))
+                meta = self._get_metadata(hit.entity.get("album_name"), hit.entity.get("artist_name"))
                 output.append({
                     "id": hit.id,
-                    "title": hit.entity.get("title"),
-                    "artist": hit.entity.get("artist"),
+                    "title": hit.entity.get("album_name"),
+                    "artist": hit.entity.get("artist_name"),
                     "distance": hit.distance,
                     "styles": meta.get("styles", "Unknown"),
                     "note": meta.get("note_moyenne", None)
@@ -86,26 +86,26 @@ class Recommender:
         else:
             embedding = [embedding]
 
-        search_params = {"metric_type": "L2", "params": {"nprobe": 10}}
+        search_params = {"metric_type": "IP", "params": {"nprobe": 10}}
         results = self.collection.search(
             data=embedding,
             anns_field="embedding",
             param=search_params,
             limit=top_k + 1, # +1 because the album itself will be found
-            output_fields=["title", "artist"]
+            output_fields=["album_name", "artist_name"]
         )
         
         output = []
         for hits in results:
             for hit in hits:
-                if hit.entity.get("title") == album_title:
+                if hit.entity.get("album_name") == album_title:
                     continue # Skip self
                     
-                meta = self._get_metadata(hit.entity.get("title"), hit.entity.get("artist"))
+                meta = self._get_metadata(hit.entity.get("album_name"), hit.entity.get("artist_name"))
                 output.append({
                     "id": hit.id,
-                    "title": hit.entity.get("title"),
-                    "artist": hit.entity.get("artist"),
+                    "title": hit.entity.get("album_name"),
+                    "artist": hit.entity.get("artist_name"),
                     "distance": hit.distance,
                     "styles": meta.get("styles", "Unknown"),
                     "note": meta.get("note_moyenne", None)

@@ -1,3 +1,6 @@
+"""
+Module de chargement dans Milvus
+"""
 import pandas as pd
 import numpy as np
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
@@ -8,7 +11,6 @@ import sys
 MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
 MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
 COLLECTION_NAME = "music_embeddings"
-DATA_PATH = "data/processed/sample_albums_embedded.parquet"
 
 def connect_milvus():
     print(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
@@ -17,13 +19,17 @@ def connect_milvus():
         print("✅ Connected to Milvus.")
     except Exception as e:
         print(f"❌ Failed to connect to Milvus: {e}")
-        sys.exit(1)
+        # On ne quitte pas brutalement ici pour laisser le pipeline gérer l'erreur
+        raise e
 
-def create_collection():
+def create_collection(drop_existing=False):
     # Check if collection exists
     if utility.has_collection(COLLECTION_NAME):
-        print(f"⚠️ Collection '{COLLECTION_NAME}' already exists. Dropping it...")
-        utility.drop_collection(COLLECTION_NAME)
+        if drop_existing:
+            print(f"⚠️ Collection '{COLLECTION_NAME}' already exists. Dropping it...")
+            utility.drop_collection(COLLECTION_NAME)
+        else:
+            return Collection(COLLECTION_NAME)
 
     print(f"Creating collection '{COLLECTION_NAME}'...")
     fields = [
@@ -37,25 +43,24 @@ def create_collection():
     print("✅ Collection created.")
     return collection
 
-def load_data():
-    if not os.path.exists(DATA_PATH):
-        print(f"❌ Data file not found at {DATA_PATH}")
-        sys.exit(1)
+def load_data(data_path):
+    if not os.path.exists(data_path):
+        print(f"❌ Data file not found at {data_path}")
+        return None
         
-    print(f"Loading data from {DATA_PATH}...")
-    df = pd.read_parquet(DATA_PATH)
+    print(f"Loading data from {data_path}...")
+    df = pd.read_parquet(data_path)
     
     # Ensure embeddings are list of floats
     if "embedding" not in df.columns:
         print("❌ Column 'embedding' missing in parquet file.")
-        sys.exit(1)
+        return None
 
-    # Convert string embeddings if necessary (e.g. "[0.1, ...]")
+    # Convert string embeddings if necessary
     if isinstance(df["embedding"].iloc[0], str):
-        print("Converting string embeddings to list...")
         df["embedding"] = df["embedding"].apply(lambda x: eval(x))
     
-    # Ensure they are lists (Milvus expects lists for float vectors)
+    # Ensure they are lists
     if isinstance(df["embedding"].iloc[0], np.ndarray):
         df["embedding"] = df["embedding"].apply(lambda x: x.tolist())
 
@@ -65,7 +70,10 @@ def load_data():
 def insert_data(collection, df):
     print("Inserting data into Milvus...")
     
-    # Prepare data for insertion (column-based)
+    if df is None:
+        print("No data to insert")
+        return
+
     data_to_insert = [
         df["album_name"].tolist(),
         df["artist_name"].tolist(),
@@ -87,13 +95,11 @@ def create_index(collection):
     collection.load()
     print("✅ Index created and collection loaded.")
 
-def main():
+def load_database(data_path: str, recreate: bool = False):
+    """Fonction principale pour charger la donnée dans Milvus"""
     connect_milvus()
-    collection = create_collection()
-    df = load_data()
-    insert_data(collection, df)
-    create_index(collection)
-    print("\n🎉 Data loading complete!")
-
-if __name__ == "__main__":
-    main()
+    collection = create_collection(drop_existing=recreate)
+    df = load_data(data_path)
+    if df is not None:
+        insert_data(collection, df)
+        create_index(collection)

@@ -1,6 +1,5 @@
 """
-Script de scraping complet pour Guts of Darkness
-Génère le fichier sample_albums.csv avec tous les albums
+Module de scraping pour Guts of Darkness
 """
 import requests
 from bs4 import BeautifulSoup
@@ -8,7 +7,6 @@ import pandas as pd
 from time import sleep
 import random
 import re
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -16,18 +14,11 @@ from pathlib import Path
 HEADERS = {
     "User-Agent": "MusicRecommenderBot/1.0 (Educational Project)"
 }
-OUTPUT_DIR = Path("data/processed")
-OUTPUT_FILE = OUTPUT_DIR / "sample_albums.csv"
-START_ID = 0
-END_ID = 25000  # Ajuste selon tes besoins
-MAX_WORKERS = 10  # Nombre de threads parallèles
-SAVE_INTERVAL = 100  # Sauvegarde tous les N albums
 
 def generate_album_links(start_id: int, end_id: int) -> list:
     """Génère les URLs d'albums à scraper"""
     BASE_URL = "https://www.gutsofdarkness.com/god/objet.php?objet="
     urls = [f"{BASE_URL}{i}" for i in range(start_id, end_id + 1)]
-    print(f"📋 {len(urls)} liens générés ({urls[0]} → {urls[-1]})")
     return urls
 
 def parse_album(html: str, url: str) -> dict:
@@ -116,30 +107,32 @@ def scrape_url(url: str) -> dict | None:
         print(f"❌ Erreur sur {url}: {e}")
         return None
 
-def main():
-    # Créer le dossier de sortie
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def run_scraper(output_path: str = "data/processed/sample_albums.csv", start_id: int = 0, end_id: int = 100, max_workers: int = 10) -> pd.DataFrame:
+    """Lance le scraping complet"""
+    OUTPUT_FILE = Path(output_path)
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     
-    # Charger les données existantes si le fichier existe
+    # Charger les données existantes
     existing_urls = set()
     if OUTPUT_FILE.exists():
         print(f"📂 Fichier existant trouvé : {OUTPUT_FILE}")
         df_existing = pd.read_csv(OUTPUT_FILE)
         existing_urls = set(df_existing["source_url"].tolist())
-        print(f"✅ {len(existing_urls)} albums déjà scrapés")
     
     # Générer les URLs
-    urls = generate_album_links(START_ID, END_ID)
+    urls = generate_album_links(start_id, end_id)
     urls_to_scrape = [url for url in urls if url not in existing_urls]
     print(f"🎯 {len(urls_to_scrape)} nouvelles URLs à scraper")
     
     if not urls_to_scrape:
         print("✅ Aucune nouvelle URL à scraper !")
-        return
+        if OUTPUT_FILE.exists():
+            return pd.read_csv(OUTPUT_FILE)
+        return pd.DataFrame()
     
     # Scraping multithread
     results = []
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(scrape_url, url): url for url in urls_to_scrape}
         
         for i, future in enumerate(as_completed(futures), 1):
@@ -147,21 +140,6 @@ def main():
             if result:
                 results.append(result)
                 print(f"[{i}/{len(urls_to_scrape)}] ✅ {result['artist_name']} - {result['album_name']}")
-            else:
-                print(f"[{i}/{len(urls_to_scrape)}] ⚠️ Échec")
-            
-            # Sauvegarde intermédiaire
-            if i % SAVE_INTERVAL == 0:
-                df_new = pd.DataFrame(results)
-                if OUTPUT_FILE.exists():
-                    df_old = pd.read_csv(OUTPUT_FILE)
-                    df_combined = pd.concat([df_old, df_new], ignore_index=True)
-                    df_combined.drop_duplicates(subset=["source_url"], inplace=True)
-                    df_combined.to_csv(OUTPUT_FILE, index=False, encoding="utf-8")
-                else:
-                    df_new.to_csv(OUTPUT_FILE, index=False, encoding="utf-8")
-                print(f"💾 Sauvegarde intermédiaire ({len(results)} nouveaux albums)")
-                results = []  # Reset pour la prochaine batch
     
     # Sauvegarde finale
     if results:
@@ -173,11 +151,10 @@ def main():
             df_combined.to_csv(OUTPUT_FILE, index=False, encoding="utf-8")
         else:
             df_new.to_csv(OUTPUT_FILE, index=False, encoding="utf-8")
+            df_combined = df_new
+            
+        return df_combined
     
-    # Statistiques finales
-    df_final = pd.read_csv(OUTPUT_FILE)
-    print(f"\n🎉 Scraping terminé !")
-    print(f"📊 Total : {len(df_final)} albums dans {OUTPUT_FILE}")
-
-if __name__ == "__main__":
-    main()
+    if OUTPUT_FILE.exists():
+        return pd.read_csv(OUTPUT_FILE)
+    return pd.DataFrame()
