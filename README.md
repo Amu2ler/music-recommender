@@ -1,86 +1,112 @@
-# 🎵 Music Recommender - Système de Recommandation Musicale IA
+# 🎵 Music Recommender – Guts of Darkness
 
-## 📋 Description
+## 📌 Présentation du projet
 
-Système de recommandation musicale intelligent développé en équipe, capable de suggérer des albums similaires en combinant plusieurs approches d'analyse :
+Ce projet vise à concevoir un **système de recommandation musicale sémantique** à partir de données issues du site [Guts of Darkness](https://www.gutsofdarkness.com/) (site web non inclus dans le projet, uniquement une source de données).
 
-- **Similarité sémantique** via embeddings textuels des critiques et métadonnées
-- **Analyse des métadonnées** (artiste, genre, tags, année)
-- **Interactions utilisateurs** (notes, commentaires)
-- **Caractéristiques audio** (MFCC, tempo, spectre) pour enrichir les recommandations
+L’objectif est de permettre à un utilisateur de découvrir des albums similaires à ses goûts en s’appuyant sur des techniques modernes de **Traitement du Langage Naturel (NLP)**, de **recherche vectorielle** et de **visualisation interactive**.
 
-Le système utilise une base de données vectorielle pour effectuer des recherches par similarité plutôt que par mots-clés exacts, offrant des recommandations plus pertinentes et contextuelles.
+Le système repose sur un pipeline complet allant du _scraping_ des données jusqu’à leur exploitation via une API et une interface graphique.
 
-## 🛠️ Stack Technique
+## 🧠 Principe général
 
-### Backend & API
+Le fonctionnement global du projet suit le pipeline suivant, allant de la donnée brute à la recommandation finale :
 
-- **FastAPI** - Framework web moderne et performant pour l'API REST
-- **Python 3.11** - Langage principal du projet
+### 1. Collecte des données
 
-### Intelligence Artificielle & Machine Learning
+- _Scraping_ des pages albums (artiste, styles, chroniques, notes, tags).
+- Stockage intermédiaire sous forme de fichiers CSV.
 
-- **Sentence Transformers** - Génération d'embeddings textuels pour la similarité sémantique
-- **Librosa** - Extraction de caractéristiques audio (MFCC, tempo, spectrogrammes)
-- **Mutagen** - Manipulation des métadonnées audio
+### 2. Prétraitement et vectorisation
 
-### Base de Données & Stockage
+- Nettoyage des champs textuels (normalisation, suppression du bruit).
+- Construction d’un **texte sémantique global** par album.
+- Génération d’**embeddings** (représentations vectorielles) à l’aide d’un modèle de type _Sentence Transformers_.
 
-- **Milvus** - Base de données vectorielle pour recherche par similarité (cosine distance)
-- **etcd** - Coordination distribuée pour Milvus
-- **MinIO** - Stockage d'objets compatible S3
+### 3. Réduction dimensionnelle & visualisation
 
-### Data Processing & Scraping
+- Application d’**UMAP** pour projeter les embeddings en 2D.
+- Préparation des données pour une **visualisation interactive** des similarités (carte des albums).
 
-- **Pandas** - Manipulation et analyse de données
-- **BeautifulSoup4** - Web scraping des critiques musicales
-- **Requests** - Collecte de données depuis sites spécialisés
+### 4. Stockage vectoriel
 
-### Interface & Visualisation
+- Insertion des embeddings dans une **base de données vectorielle Milvus**.
+- Indexation pour permettre des recherches rapides par similarité (recherche du plus proche voisin).
+- Recherche sémantique à partir d’une requête textuelle (similarité vectorielle).
 
-- **Streamlit** - Interface utilisateur interactive pour démonstration
+### 5. Recherche et recommandation
 
-### DevOps & Infrastructure
+- Recherche sémantique à partir d’une requête textuelle.
+- Filtrage possible par styles musicaux et notes.
+- Classement des résultats selon différents critères.
 
-- **Docker Compose** - Orchestration des services (Milvus, etcd, MinIO)
-- **Loguru** - Logging avancé
-- **Pytest** - Tests unitaires et d'intégration
+### 6. Exposition via API et interface utilisateur
 
-## 🏗️ Architecture
+- **API REST** pour interroger le moteur de recommandation.
+- **Interface graphique** pour la recherche et l’exploration visuelle des albums.
+
+## ⚙️ Technologies utilisées
+
+| Catégorie                            | Outils                                   | Description                                                                                          |
+| :----------------------------------- | :--------------------------------------- | :--------------------------------------------------------------------------------------------------- |
+| **Langages & Frameworks**            | Python, FastAPI, Streamlit, Pandas/NumPy | Langage principal, API REST performante, Interface utilisateur interactive, Manipulation de données. |
+| **Intelligence Artificielle & Data** | SentenceTransformers, UMAP               | Génération d'embeddings sémantiques, Réduction de dimension pour la visualisation.                   |
+| **Recherche par Similarité**         | Milvus                                   | Base de données vectorielle spécialisée.                                                             |
+| **Base de données & Infrastructure** | Docker & Docker Compose, MinIO, Etcd     | Orchestration des services, Stockage objet pour Milvus.                                              |
+| **Visualisation**                    | Plotly                                   | Graphiques interactifs (carte 2D des albums).                                                        |
+
+## 🗂️ Architecture du projet (vue logique)
 
 ```
-SCRAPING (BeautifulSoup)
-    ↓
-DATAFRAME (Pandas - métadonnées normalisées)
-    ↓
-EMBEDDING (Sentence Transformers)
-    ↓
-MILVUS (Index vectoriel + recherche par similarité)
-    ↓
-FASTAPI (API REST)
-    ↓
-STREAMLIT (Interface utilisateur)
+.
+├── api/                # API FastAPI (endpoints de recherche)
+├── data/               # Données brutes et traitées
+├── notebooks/          # Notebooks d'exploration et scripts d'ingestion
+├── src/                # Code source (ingestion, vectorization, recommendation)
+├── ui/                 # Interface Streamlit
+├── run_pipeline.py     # Orchestrateur du pipeline
+├── docker-compose.yml  # Services nécessaires (Milvus, MinIO...)
+└── requirements.txt
 ```
 
-## 🎯 Fonctionnalités Clés
+## 🚀 Lancement du projet
 
-1. **Collecte de données** - Scraping automatisé de critiques musicales et métadonnées
-2. **Vectorisation intelligente** - Transformation des textes en embeddings via modèles transformers
-3. **Recherche par similarité** - Algorithmes de distance cosinus pour trouver des albums similaires
-4. **API REST** - Endpoints pour requêtes de recommandation en temps réel
-5. **Filtrage avancé** - Combinaison de critères (notes, genres, année) avec similarité sémantique
+Suivez les étapes ci-dessous pour démarrer et exploiter le système de recommandation.
 
-## 👥 Équipe
+### 1. Démarrer les services (Milvus, MinIO, Etcd)
 
-Projet collaboratif développé par :
+```bash
+docker-compose up -d
+```
 
-- Arthur Muller
-- Abdoulaye Diallo
-- Semih Taskin
+### 2\. Installer les dépendances Python
 
-## 🔑 Points Techniques Notables
+```bash
+pip install -r requirements.txt
+```
 
-- Utilisation de **Vector Store (Milvus)** pour des performances optimales sur grandes quantités de données
-- Architecture **microservices** avec Docker Compose
-- Pipeline complet de **ML Engineering** : collecte → nettoyage → vectorisation → indexation → API
-- Approche **hybride** combinant NLP et analyse audio
+### 3\. Lancer le pipeline complet (Scraping, Vectorisation, Indexation)
+
+> **Note :** Cette étape peut être longue lors de la première exécution.
+
+```bash
+python run_pipeline.py
+```
+
+### 4\. Démarrer l’API
+
+L'API sera accessible sur `http://127.0.0.1:8000`.
+
+```bash
+uvicorn api.main:app --reload
+```
+
+### 5\. Lancer l’interface utilisateur
+
+```bash
+streamlit run ui/_Search.py
+```
+
+## 🎯 Objectif pédagogique
+
+Ce projet met en œuvre un pipeline complet de recommandation basé sur des techniques modernes de traitement du texte, de recherche vectorielle et de visualisation interactive, illustrant une application concrète de l’IA et de la data science à un cas réel.
